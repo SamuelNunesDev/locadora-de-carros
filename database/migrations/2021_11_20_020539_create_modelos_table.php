@@ -25,6 +25,8 @@ class CreateModelosTable extends Migration
             $table->boolean('abs');
             $table->softDeletes();
             $table->timestamps();
+
+            $table->foreign('marca_id')->references('id')->on('marcas');
         });
     }
 

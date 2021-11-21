@@ -22,6 +22,8 @@ class CreateCarrosTable extends Migration
             $table->unsignedInteger('km');
             $table->softDeletes();
             $table->timestamps();
+
+            $table->foreign('modelo_id')->references('id')->on('modelos');
         });
     }
 

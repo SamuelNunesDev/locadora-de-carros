@@ -3,10 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Marca;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 
 class MarcaController extends Controller
 {
+    // Injetando o model como atributo do controlador.
+
+    public function __construct(Marca $marca)
+    {
+        $this->marca = $marca;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -14,17 +24,7 @@ class MarcaController extends Controller
      */
     public function index()
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
+        return response()->json($this->marca->all());
     }
 
     /**
@@ -35,51 +35,90 @@ class MarcaController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate($this->marca->rules(), $this->marca->feedbacks());
+
+        try {  
+            $this->marca->nome = $request->nome;
+            $this->marca->imagem = $request->imagem->store('img', 'public');
+            $this->marca->save();
+
+            return response()->json($this->marca, 201);
+        } catch( Exception $e ) {
+            return response()->json(['erro' => 'Houve um erro ao tentar salvar a marca! '.$e->getMessage()], 404);
+        }
     }
 
     /**
      * Display the specified resource.
      *
-     * @param  \App\Models\Marca  $marca
+     * @param  int  $marca
      * @return \Illuminate\Http\Response
      */
-    public function show(Marca $marca)
+    public function show(int $marca)
     {
-        //
-    }
+        $response = $this->marca->find($marca);
+        if( $response === null ) { return response()->json(['erro' => 'Erro! Nenhum registro encontrado!'], 404); }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\Marca  $marca
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Marca $marca)
-    {
-        //
+        return response()->json($response);
     }
 
     /**
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Marca  $marca
+     * @param  int  $marca
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Marca $marca)
+    public function update(Request $request, int $marca)
     {
-        //
+        $this->marca = $this->marca->find($marca);
+
+        if( $this->marca === null ) { 
+            return response()->json(['erro' => 'Erro! A marca não foi encontrada ou não existe.'], 404); 
+        }
+        $rules = $this->marca->rules();
+        $feedbacks = $this->marca->feedbacks();
+
+        if( $request->method() === 'PATCH' ) {
+            $rules = Arr::where($rules, function($value, $key) use($request){
+                return Arr::exists($request->all(), $key);
+            });
+            $request->validate($rules, $feedbacks);
+        } else {
+           $request->validate($rules, $feedbacks);
+        }
+        
+        try {
+            $dados = $request->all();
+            if( isset($dados['imagem']) ) {
+                Storage::disk('public')->delete($this->marca->imagem);
+                $dados['imagem'] = $dados['imagem']->store('img', 'public');
+            }
+            $this->marca->update($dados);
+
+            return response()->json($this->marca);
+        } catch( Exception $e ) {
+            return response()->json(['erro' => 'Ops! Houve um erro ao atualizar a marca. '.$e->getMessage()], 404);
+        }
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\Marca  $marca
+     * @param  int $marca
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Marca $marca)
+    public function destroy(int $marca)
     {
-        //
+        try {
+            $this->marca = $this->marca->findOrFail($marca);
+            $nome = $this->marca->nome;
+            Storage::disk('public')->delete($this->marca->imagem);
+            $this->marca->delete();
+   
+            return response()->json(['msg' => "A marca $nome foi removida com sucesso!"]);
+        } catch( Exception $e ) {
+            return response()->json(['erro' => 'Ops! Houve um erro ao tentar excluir a marca! '.$e->getMessage()], 404);
+        }
     }
 }

@@ -26,6 +26,9 @@ class CreateLocacoesTable extends Migration
             $table->string('km_final', 45);
             $table->softDeletes();
             $table->timestamps();
+
+            $table->foreign('cliente_id')->references('id')->on('clientes');
+            $table->foreign('carro_id')->references('id')->on('carros');
         });
     }
 
@@ -36,6 +39,6 @@ class CreateLocacoesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('locacaos');
+        Schema::dropIfExists('locacoes');
     }
 }
