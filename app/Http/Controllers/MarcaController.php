@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Marca;
+use App\Repositories\AbstractRepository;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 
 class MarcaController extends Controller
@@ -22,9 +22,24 @@ class MarcaController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json($this->marca->all());
+        if( $request->has('atributos') ) {
+            $this->marca = AbstractRepository::selectAtributos($this->marca, 'id,'.$request->atributos);
+        }
+        
+        if( $request->has('filtros') ) {
+            $this->marca = AbstractRepository::filtros($this->marca, $request->filtros);
+        }
+
+        if( $request->has('atributos_modelos') ) {
+            $atributos = 'modelos:marca_id,'.$request->atributos_modelos;
+            $this->marca = AbstractRepository::atributosRelacionamento($this->marca, $atributos);
+        } else {
+            $this->marca = $this->marca->with('modelos');
+        }
+
+        return response()->json($this->marca->get());
     }
 
     /**
@@ -39,7 +54,7 @@ class MarcaController extends Controller
 
         try {  
             $this->marca->nome = $request->nome;
-            $this->marca->imagem = $request->imagem->store('img', 'public');
+            $this->marca->imagem = $request->imagem->store('img/marcas', 'public');
             $this->marca->save();
 
             return response()->json($this->marca, 201);
@@ -56,10 +71,11 @@ class MarcaController extends Controller
      */
     public function show(int $marca)
     {
-        $response = $this->marca->find($marca);
-        if( $response === null ) { return response()->json(['erro' => 'Erro! Nenhum registro encontrado!'], 404); }
-
-        return response()->json($response);
+        try {
+            return response()->json($this->marca->with('modelos')->findOrFail($marca));
+        } catch(Exception $e) {
+            return response()->json(['erro' => 'Erro! Nenhum registro encontrado! ', $e->getMessage()], 404);
+        }
     }
 
     /**
@@ -72,27 +88,16 @@ class MarcaController extends Controller
     public function update(Request $request, int $marca)
     {
         $this->marca = $this->marca->find($marca);
-
         if( $this->marca === null ) { 
             return response()->json(['erro' => 'Erro! A marca não foi encontrada ou não existe.'], 404); 
         }
-        $rules = $this->marca->rules();
-        $feedbacks = $this->marca->feedbacks();
-
-        if( $request->method() === 'PATCH' ) {
-            $rules = Arr::where($rules, function($value, $key) use($request){
-                return Arr::exists($request->all(), $key);
-            });
-            $request->validate($rules, $feedbacks);
-        } else {
-           $request->validate($rules, $feedbacks);
-        }
+        AbstractRepository::dinamicValidate($request, $this->marca->rules(), $this->marca->feedbacks());
         
         try {
             $dados = $request->all();
             if( isset($dados['imagem']) ) {
                 Storage::disk('public')->delete($this->marca->imagem);
-                $dados['imagem'] = $dados['imagem']->store('img', 'public');
+                $dados['imagem'] = $dados['imagem']->store('img/marcas', 'public');
             }
             $this->marca->update($dados);
 

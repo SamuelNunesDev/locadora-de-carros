@@ -20,7 +20,7 @@ class Marca extends Model
     public function rules()
     {
         return [
-            'nome'=> "required|unique:marcas,nome,".$this->id."|max:30",
+            'nome'=> "required|unique:marcas,nome,".$this->id."|max:30|string",
             'imagem' => 'required|file|mimes:png,jpeg,jpg'
         ];
     }
@@ -33,7 +33,14 @@ class Marca extends Model
             'unique' => 'Já existe uma marca registrada com este nome! Por favor escolha um nome único!',
             'max' => 'O campo :attribute deve conter no máximo :max caracteres!',
             'file' => 'No campo :attribute deve ser enviado um arquivo do tipo png, jpeg ou jpg!',
-            'mimes' => 'Só é possível enviar arquivos nos formatos png, jpeg ou jpg!'
+            'mimes' => 'Só é possível enviar arquivos nos formatos png, jpeg ou jpg!',
+            'string' => 'O campo :attribute deve ser preenchido com caracteres do tipo texto!'
         ];
+    }
+
+    // Relacionamento Marca tem muitos Modelos
+    public function modelos()
+    {
+        return $this->hasMany(Modelo::class);
     }
 }

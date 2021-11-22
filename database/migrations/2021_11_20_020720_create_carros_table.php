@@ -17,7 +17,7 @@ class CreateCarrosTable extends Migration
         Schema::create('carros', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Modelo::class);
-            $table->string('placa', 10);
+            $table->string('placa', 10)->unique();
             $table->boolean('disponivel');
             $table->unsignedInteger('km');
             $table->softDeletes();
