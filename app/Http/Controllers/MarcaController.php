@@ -51,7 +51,7 @@ class MarcaController extends Controller
     public function store(Request $request)
     {
         $request->validate($this->marca->rules(), $this->marca->feedbacks());
-
+        
         try {  
             $this->marca->nome = $request->nome;
             $this->marca->imagem = $request->imagem->store('img/marcas', 'public');
