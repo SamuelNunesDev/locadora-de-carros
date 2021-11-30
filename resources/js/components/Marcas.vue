@@ -2,7 +2,12 @@
     <div class="container">
         <modal-component id="modalMarca" titulo="Adicionar Marca">
             <template v-slot:alerta>
-                <alert-component class_status="success" msg_status="Sucesso!" msg="Marca cadastrada com sucesso!"></alert-component>
+                <alert-component v-if="status == 'success'" class_status="success" msg_status="Sucesso!" msg="Marca cadastrada com sucesso!"></alert-component>
+                <alert-component v-if="status == 'error'" class_status="danger" msg_status="Erro!" :msg="`Houve um erro ao tentar cadastrar a Marca. ${feedback.message}`">
+                    <ol v-if="feedback.errors">
+                        <li v-for="e, key in feedback.errors" :key="key">{{ e[0] }}</li>
+                    </ol>
+                </alert-component>
             </template>
             <template v-slot:conteudo>
                 <div class="form-group mb-3">
@@ -67,17 +72,33 @@
 </template>
 
 <script>
-import Alert from './Alert.vue'
     export default {
-  components: { Alert },
         data() {
             return {
                 nome_marca: '',
                 arquivos_imagens: [],
                 url_base: 'http://localhost:8000/api/v1/marca',
+                status: '',
+                feedback: '',
+                marcas: []
             }
         },
         methods: {
+            carregarLista() {
+                let config = {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': this.token
+                    }
+                }
+                axios.get(this.url_base, config)
+                    .then(response => {
+                        this.marcas = response.data
+                    })
+                    .catch(errors => {
+                        console.log(errors)
+                    })
+            },
             carregarImagem(e) {
                 this.arquivos_imagens = e.target.files
             },
@@ -96,10 +117,11 @@ import Alert from './Alert.vue'
 
                 axios.post(this.url_base, form_data, config)
                     .then(response => {
-                        console.log(response)
+                        this.status = 'success'
                     })
                     .catch(errors => {
-                        console.log(errors)
+                        this.status = 'error'
+                        this.feedback = errors.response.data
                     })
             }
         },
@@ -111,6 +133,9 @@ import Alert from './Alert.vue'
 
                 return token
             }   
+        },
+        mounted() {
+            this.carregarLista()
         }
     }
 </script>
